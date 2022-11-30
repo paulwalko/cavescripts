@@ -26,18 +26,25 @@ func main() {
 	fileScanner.Split(bufio.ScanLines)
 
 	// Setup .3d file
-	pimg := C.img_open_write_cs(C.CString("output.3d"), C.CString("my survey"), nil, 0)
+	var pimg *C.img
 	labelMap := make(map[string]bool)
 
-	// Process each line
-	//	lineNum := 0
+	// Process lines
+	Title := ""
+	lineNum := 0
 	for fileScanner.Scan() {
+		lineNum += 1
 		lineData := strings.Fields(fileScanner.Text())
-		//
-		//		lineNum += 1
-		//		if lineNum < 10 || len(lineData) < 5 || lineNum > 1000 {
-		//			continue
-		//		}
+
+		/* Init 3d file */
+		if lineNum == 1 {
+			Title = lineData[0]
+			pimg = C.img_open_write_cs(C.CString("output.3d"), C.CString(Title), nil, 0)
+		}
+		/* Skip header & footer */
+		if lineNum < 10 || len(lineData) == 0 || lineData[0] == "Vectors" {
+			continue
+		}
 
 		/* Fields in go format */
 		Label := strings.Join([]string{lineData[0], lineData[1]}, ".")
@@ -50,7 +57,6 @@ func main() {
 			Code := C.img_LABEL
 			Flags := 0x02
 
-			// Write fields
 			C.img_write_item(
 				pimg,
 				C.int(Code),
@@ -60,7 +66,6 @@ func main() {
 				C.double(MvYFt*Ft_to_M),
 				C.double(MvZFt*Ft_to_M),
 			)
-
 			labelMap[Label] = true
 		}
 
@@ -78,7 +83,6 @@ func main() {
 				C.double(MvYFt*Ft_to_M),
 				C.double(MvZFt*Ft_to_M),
 			)
-
 		}
 
 		/* LINE */
