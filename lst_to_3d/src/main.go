@@ -7,6 +7,7 @@ package main
 import "C"
 import (
 	"bufio"
+	"flag"
 	"os"
 	"strconv"
 	"strings"
@@ -15,8 +16,19 @@ import (
 const Ft_to_M = 0.3048
 
 func main() {
+	// Process args
+	var lstFile string
+	flag.StringVar(&lstFile, "lst", "", "Usage")
+	flag.Parse()
+	if lstFile == "" {
+		panic("please pass -lst arg")
+	}
+
+	// Determine output file
+	outFile := strings.Join([]string{lstFile[0 : len(lstFile)-4], ".3d"}, "")
+
 	// Open file
-	f, err := os.Open("data.lst")
+	f, err := os.Open(lstFile)
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +51,7 @@ func main() {
 		/* Init 3d file */
 		if lineNum == 1 {
 			Title = lineData[0]
-			pimg = C.img_open_write_cs(C.CString("output.3d"), C.CString(Title), nil, 0)
+			pimg = C.img_open_write_cs(C.CString(outFile), C.CString(Title), nil, 0)
 		}
 		/* Skip header & footer */
 		if lineNum < 10 || len(lineData) == 0 || lineData[0] == "Vectors" {
@@ -51,6 +63,9 @@ func main() {
 		MvXFt, _ := strconv.ParseFloat(lineData[2], 64)
 		MvYFt, _ := strconv.ParseFloat(lineData[3], 64)
 		MvZFt, _ := strconv.ParseFloat(lineData[4], 64)
+
+		/* Survey Style */
+		pimg.style = C.img_STYLE_NORMAL
 
 		/* LABEL */
 		if _, ok := labelMap[Label]; !ok {
