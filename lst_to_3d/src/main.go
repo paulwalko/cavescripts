@@ -100,19 +100,21 @@ func main() {
 			)
 		}
 
-		/* LINE */
-		Code := C.img_LINE
-		Flags := 0
+		if len(lineData) == 6 {
+			/* LINE */
+			Code := C.img_LINE
+			Flags := 0
 
-		C.img_write_item(
-			pimg,
-			C.int(Code),
-			C.int(Flags),
-			C.CString(""),
-			C.double(MvXFt*Ft_to_M),
-			C.double(MvYFt*Ft_to_M),
-			C.double(MvZFt*Ft_to_M),
-		)
+			C.img_write_item(
+				pimg,
+				C.int(Code),
+				C.int(Flags),
+				C.CString(""),
+				C.double(MvXFt*Ft_to_M),
+				C.double(MvYFt*Ft_to_M),
+				C.double(MvZFt*Ft_to_M),
+			)
+		}
 	}
 
 	// Close 3d file
