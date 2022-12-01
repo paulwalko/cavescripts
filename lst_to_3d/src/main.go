@@ -100,8 +100,8 @@ func main() {
 			)
 		}
 
+		/* LINE */
 		if len(lineData) == 6 {
-			/* LINE */
 			Code := C.img_LINE
 			Flags := 0
 
