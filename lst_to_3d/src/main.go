@@ -8,6 +8,7 @@ import "C"
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +26,7 @@ func main() {
 	}
 
 	// Determine output file
-	outFile := strings.Join([]string{lstFile[0 : len(lstFile)-4], ".3d"}, "")
+	outFile := lstFile[0:len(lstFile)-4] + ".3d"
 
 	// Open file
 	f, err := os.Open(lstFile)
@@ -44,25 +45,39 @@ func main() {
 	// Process lines
 	Title := ""
 	lineNum := 0
+	PrefixOffset := 1 // Lines are 6 fields long w/ prefix, otherwise 5
 	for fileScanner.Scan() {
 		lineNum += 1
-		lineData := strings.Fields(fileScanner.Text())
+		lineDataStr := fileScanner.Text()
+		lineData := strings.Fields(lineDataStr)
 
 		/* Init 3d file */
 		if lineNum == 1 {
-			Title = lineData[0]
+			Title = strings.TrimSpace(lineDataStr)
 			pimg = C.img_open_write_cs(C.CString(outFile), C.CString(Title), nil, 0)
 		}
 		/* Skip header & footer */
 		if lineNum < 10 || len(lineData) == 0 || lineData[0] == "Vectors" {
 			continue
 		}
+		/* Check if Prefix exists */
+		if strings.HasPrefix(lineDataStr, "\t") {
+			PrefixOffset = 0
+		}
 
-		/* Fields in go format */
-		Label := strings.Join([]string{lineData[0], lineData[1]}, ".")
-		MvXFt, _ := strconv.ParseFloat(lineData[2], 64)
-		MvYFt, _ := strconv.ParseFloat(lineData[3], 64)
-		MvZFt, _ := strconv.ParseFloat(lineData[4], 64)
+		/* Parse Prefix, Label */
+		Prefix := ""
+		Name := strings.Replace(lineData[PrefixOffset], ".", "_", -1)
+		if PrefixOffset == 1 {
+			Prefix = lineData[0] + "."
+		}
+		Label := Prefix + Name
+
+		/* Parse X Y Z */
+		MvXFt, _ := strconv.ParseFloat(lineData[1+PrefixOffset], 64)
+		MvYFt, _ := strconv.ParseFloat(lineData[2+PrefixOffset], 64)
+		MvZFt, _ := strconv.ParseFloat(lineData[3+PrefixOffset], 64)
+		fmt.Printf("x: %f, y: %f, z: %f\n", MvXFt, MvYFt, MvZFt)
 
 		/* Survey Style */
 		pimg.style = C.img_STYLE_NORMAL
@@ -85,7 +100,7 @@ func main() {
 		}
 
 		/* MOVE */
-		if len(lineData) == 5 {
+		if len(lineData) == 4+PrefixOffset {
 			Code := C.img_MOVE
 			Flags := 0
 
@@ -101,7 +116,7 @@ func main() {
 		}
 
 		/* LINE */
-		if len(lineData) == 6 {
+		if len(lineData) == 5+PrefixOffset {
 			Code := C.img_LINE
 			Flags := 0
 
