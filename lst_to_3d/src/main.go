@@ -8,7 +8,7 @@ import "C"
 import (
 	"bufio"
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -19,10 +19,10 @@ const Ft_to_M = 0.3048
 func main() {
 	// Process args
 	var lstFile string
-	flag.StringVar(&lstFile, "lst", "", "Usage")
+	flag.StringVar(&lstFile, "lst", "", "Walls LST file containing vertex data")
 	flag.Parse()
 	if lstFile == "" {
-		panic("please pass -lst arg")
+		log.Fatal("please pass -lst arg")
 	}
 
 	// Determine output file
@@ -77,7 +77,6 @@ func main() {
 		MvXFt, _ := strconv.ParseFloat(lineData[1+PrefixOffset], 64)
 		MvYFt, _ := strconv.ParseFloat(lineData[2+PrefixOffset], 64)
 		MvZFt, _ := strconv.ParseFloat(lineData[3+PrefixOffset], 64)
-		fmt.Printf("x: %f, y: %f, z: %f\n", MvXFt, MvYFt, MvZFt)
 
 		/* Survey Style */
 		pimg.style = C.img_STYLE_NORMAL
