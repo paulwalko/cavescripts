@@ -19,23 +19,75 @@ const Ft_to_M = 0.3048
 func main() {
 	// Process args
 	var lstFile string
+	var sefFile string
 	flag.StringVar(&lstFile, "lst", "", "Walls LST file containing vertex data")
+	flag.StringVar(&sefFile, "sef", "", "Walls SEF file containing LRUD data")
 	flag.Parse()
 	if lstFile == "" {
 		log.Fatal("please pass -lst arg")
 	}
+	if sefFile == "" {
+		log.Fatal("please pass -sef arg")
+	}
 
 	// Determine output file
 	outFile := lstFile[0:len(lstFile)-4] + ".3d"
+	log.Println("Output file: " + outFile)
 
-	// Open file
-	f, err := os.Open(lstFile)
-	if err != nil {
-		panic(err)
+	/* SEF */
+	f, _ := os.Open(sefFile)
+	fileScanner := bufio.NewScanner(f)
+	fileScanner.Split(bufio.ScanLines)
+	lrudMap := make(map[string][]float64)
+	inSurvey := false
+	surveyLineLen := 0
+	lrudIndex := []int{-1, -1, -1, -1, -1, -1} // from, to, L, R, U, D
+	for fileScanner.Scan() {
+		lineDataStr := fileScanner.Text()
+		lineData := strings.Split(lineDataStr, ",")
+
+		/* Get LRUD indexes */
+		if strings.HasPrefix(lineDataStr, "#endctsurvey") || strings.HasPrefix(lineDataStr, "#endcpoint") {
+			lrudIndex = []int{-1, -1, -1, -1, -1, -1}
+			inSurvey = false
+		} else if strings.HasPrefix(lineDataStr, "#data") {
+			inSurvey = true
+			surveyLineLen = len(lineData)
+			for i := 0; i < len(lineData); i++ {
+				if lineData[i] == "from" {
+					lrudIndex[0] = i
+				} else if lineData[i] == "to" {
+					lrudIndex[1] = i
+				} else if lineData[i] == "left" {
+					lrudIndex[2] = i
+				} else if lineData[i] == "right" {
+					lrudIndex[3] = i
+				} else if lineData[i] == "ceil" {
+					lrudIndex[4] = i
+				} else if lineData[i] == "floor" {
+					lrudIndex[5] = i
+				}
+			}
+			/* Get LRUDs */
+		} else if inSurvey && len(lineData) == surveyLineLen && strings.HasPrefix(lineDataStr, " ") {
+			if lrudIndex[0] > -1 && lrudIndex[1] > -1 {
+				//from := lineData[lrudIndex[0]]
+				to := lineData[lrudIndex[1]]
+				left, _ := strconv.ParseFloat(lineData[lrudIndex[2]], 64)
+				right, _ := strconv.ParseFloat(lineData[lrudIndex[3]], 64)
+				up, _ := strconv.ParseFloat(lineData[lrudIndex[4]], 64)
+				down, _ := strconv.ParseFloat(lineData[lrudIndex[5]], 64)
+				lrudMap[to] = []float64{left, right, up, down}
+			}
+
+		}
 	}
 
+	/* LST */
+	f, _ = os.Open(lstFile)
+
 	// Setup line scanner
-	fileScanner := bufio.NewScanner(f)
+	fileScanner = bufio.NewScanner(f)
 	fileScanner.Split(bufio.ScanLines)
 
 	// Setup .3d file
@@ -78,8 +130,14 @@ func main() {
 		MvYFt, _ := strconv.ParseFloat(lineData[2+PrefixOffset], 64)
 		MvZFt, _ := strconv.ParseFloat(lineData[3+PrefixOffset], 64)
 
-		/* Survey Style */
+		/* Survey fields */
 		pimg.style = C.img_STYLE_NORMAL
+		if _, ok := lrudMap[Name]; ok {
+			pimg.l = C.double(lrudMap[Name][0])
+			pimg.r = C.double(lrudMap[Name][1])
+			pimg.u = C.double(lrudMap[Name][2])
+			pimg.d = C.double(lrudMap[Name][3])
+		}
 
 		/* LABEL */
 		if _, ok := labelMap[Label]; !ok {
